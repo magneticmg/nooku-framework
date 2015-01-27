@@ -279,7 +279,8 @@ abstract class KDatabaseTableAbstract extends KObject
                $identifier->name = $behavior;
            }
            else $identifier = $this->getIdentifier($behavior);
-       }
+       // set the identifier to the behavior
+       } else $identifier = $behavior;
 
        if(!isset($this->getSchema()->behaviors[$identifier->name]))
        {
