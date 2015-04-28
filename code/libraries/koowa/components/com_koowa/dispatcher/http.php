@@ -24,6 +24,7 @@ class ComKoowaDispatcherHttp extends KDispatcherHttp
     {
         parent::__construct($config);
 
+        $this->addCommandCallback('before.dispatch', '_actionRoute');
         //Render an exception before sending the response
         $this->addCommandCallback('before.fail', '_renderError');
     }
@@ -140,5 +141,32 @@ class ComKoowaDispatcherHttp extends KDispatcherHttp
         $context->response->setMessages($this->getUser()->getSession()->getContainer('message')->all());
 
         return parent::_actionDispatch($context);
+    }
+
+    /**
+     * @param KDispatcherContextInterface $context
+     */
+    function _actionRoute(KDispatcherContextInterface $context)
+    {
+        /**
+         * We could add this to the _initialize/$config maybe
+         */
+        $identifier = $this->getIdentifier()->toArray();
+        $identifier['path'] = array('dispatcher');
+        $identifier['name'] = 'router';
+        $identifier = $this->getIdentifier($identifier);
+
+        $manager = $this->getObject('manager');
+
+        $enabled = $manager->hasIdentifier($identifier) OR $manager->getClass($identifier, false);
+
+        if($enabled)
+        {
+            $url = $this->getRequest()->getUrl();
+
+            $vars = $this->getObject($identifier)->parse($url);
+
+            $this->getRequest()->setQuery($vars);
+        }
     }
 }

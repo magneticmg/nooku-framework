@@ -7,97 +7,142 @@
  * @link        https://github.com/nooku/nooku-framework for the canonical source repository
  */
 
+
 /**
- * Class ComKoowaRouter
+ * Class ComKoowaRouterRouter
+ *
+ * This class will intercept the parse
  */
-
-if (version_compare(JVERSION, '3.3', '<') && !interface_exists('JComponentRouterInterface')) {
-
-    interface JComponentRouterInterface
-    {
-    }
-
-}
-
-class ComKoowaRouterRouter extends KObject implements JComponentRouterInterface, KObjectSingleton
+class ComKoowaRouterRouter extends KObject
 {
+
     /**
-     * Special instance of the constructor to take both types of inputs.
+     * @param $router
+     * @param JUri $uri
      */
-    function __construct()
+    public function build($router, JUri $uri)
     {
-        $args = func_get_args();
 
-        $config = new KObjectConfig;
+        $query = $uri->getQuery(true);
 
-        if ($args[0] instanceof JApplicationWeb) {
-            $config->append(array(
-                'app' => $args[0],
-                'menu' => $args[1]
-            ));
-        }
+        if(isset($query['option']))
+        {
+            $component = str_replace('com_', '', $query['option']);
+            // this should be more agnostic
+            $domain = JFactory::getApplication()->isSite() ? 'site' : 'admin';
 
-        parent::__construct($config);
-    }
+            $identifier = $this->getIdentifier()->toArray();
 
-    public function parse(& $segments)
-    {
-        $vars = array();
+            $identifier['domain'] = $domain;
+            $identifier['package'] = $component;
+            $identifier['path'] = array('dispatcher');
 
-        $vars['view'] = $segments[0];
+            $str_identifier = 'com://' . $domain .'/'. $component .'.dispatcher.router';
+            //$identifier = $this->getIdentifier($identifier);
+            $manager = KObjectManager::getInstance();
 
-        if (isset($segments[1])) {
-            $vars['id'] = $segments[1];
-            $vars['view'] = KStringInflector::singularize($segments[0]);
-        }
+            $class = $manager->getClass($str_identifier, false);
 
-        $menu = JFactory::getApplication()->getMenu()->getActive();
-        if (isset($menu->query['layout'])) {
-            $vars['layout'] = $menu->query['layout'];
-        }
+            // has been bootstrapped OR class is defined exists
+            $enabled = $manager->isRegistered($str_identifier) OR ($class &&  $class != 'ComKoowaDispatcherRouter');
 
-        return $vars;
-    }
+            if($enabled)
+            {
+                if($this->getConfig($identifier)->get('prefix_component', true))
+                {
+                    $segments[] = 'component';
+                }
 
-    public function build(& $query)
-    {
-        $segments = array();
-        // try to load an Itemid
-        if (!isset($query['Itemid'])) {
+                $segments[] = $component;
 
-            var_dump(get_class($this));die();
-            $component = 'com_' . $this->getIdentifier()->getPackage();
-            $component = JComponentHelper::getComponent($component);
+                $identifier['path'] = array('dispatcher', 'router', 'rule');
+                $identifier['name'] = 'build';
+                // do the parsing
 
-            $attributes = array('component_id');
-            $values = array($component->id);
+                $segments = array_merge($segments, $this->getObject($identifier)->execute($query));
 
-            $items = JApplication::getInstance($this->getIdentifier()->getDomain())
-                ->getMenu()
-                ->getItems($attributes, $values);
+                unset($query['option']);
 
-            if (count($items)) {
-                $query['Itemid'] = $items[0]->id;
+                $uri->setPath(implode('/', $segments));
+
+                $uri->setQuery($query);
             }
 
         }
 
-        // pluralizing the view
-        if (isset($query['view'])) {
-            $segments[] = KStringInflector::pluralize($query['view']);
-            unset($query['view']);
-        }
-
-        if (isset($query['id'])) {
-            $segments[] = $query['id'];
-            unset($query['id']);
-        }
-
-        return $segments;
     }
 
-    public function preprocess($query)
-    { /*do nothing */
-    }
+    /**
+     * @param $router
+     * @param JUri $uri
+     * @return array
+     */
+//    function parse($router, JUri $uri)
+//    {
+//        $vars = array();
+//        $route = $uri->getPath();
+//
+//        $parts = explode('/',$route);
+//
+//        if($parts[0] == 'component')
+//        {
+//            $component = $parts[1];
+//            array_shift($parts);
+//            array_shift($parts);
+//        }
+//
+//        // this should be more agnostic
+//        $domain = JFactory::getApplication()->isSite() ? 'site' : 'admin';
+//
+//        $identifier = $this->getIdentifier()->toArray();
+//
+//        $identifier['domain'] = $domain;
+//        $identifier['package'] = $component;
+//        $identifier['path'] = array('dispatcher');
+//
+//        $identifier = $this->getIdentifier($identifier);
+//
+//        $manager = $this->getObject('manager');
+//        // has been bootstrapped OR class exists
+//        $enabled = $manager->hasIdentifier($identifier) OR $manager->getClass($identifier, false);
+//
+//        if ($enabled) {
+//
+//            $identifier = $this->getIdentifier($identifier)->toArray();
+//
+//            $identifier['path'] = array('dispatcher', 'router', 'rule');
+//            $identifier['name'] = 'parse';
+//
+//            $vars = $this->getObject($identifier)->execute($parts);
+//
+//        }
+//        return $vars;
+//    }
 
+//    function _buildIdentifier($component)
+//    {
+//
+//        if(strpos($component, 'com_') == 0)
+//        {
+//            $component = str_replace('com_', '', $component);
+//        }
+//
+//        // this should be more agnostic
+//        $domain = JFactory::getApplication()->isSite() ? 'site' : 'admin';
+//
+//        $identifier = $this->getIdentifier()->toArray();
+//
+//        $identifier['domain'] = $domain;
+//        $identifier['package'] = $component;
+//        $identifier['path'] = array('dispatcher');
+//
+//        $identifier = $this->getIdentifier($identifier);
+//
+//        return $identifier;
+//
+//    }
+//    function _findMenuItem($route)
+//    {
+//
+//    }
 }
