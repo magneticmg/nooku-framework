@@ -32,7 +32,7 @@ class PlgSystemKoowa extends JPlugin
             {
                 $link   = JRoute::_('index.php?option=com_config');
                 $error  = 'In order to use Nooku Framework, your database type in Global Configuration should be
-                           set to <strong>MySQLi</strong>. Please go to <a href="%2$s">Global Configuration</a> and in
+                           set to <strong>MySQLi</strong>. Please go to <a href="%s">Global Configuration</a> and in
                            the \'Server\' tab change your Database Type to <strong>MySQLi</strong>.';
 
                 JFactory::getApplication()->enqueueMessage(sprintf(JText::_($error), $link), 'warning');
@@ -103,37 +103,60 @@ class PlgSystemKoowa extends JPlugin
      */
     public function bootstrap()
     {
-        // Koowa: setup
         $path = JPATH_LIBRARIES.'/koowa/libraries/koowa.php';
         if (file_exists($path))
         {
-            require_once $path;
-
-            $application = JFactory::getApplication()->getName();
-
             /**
-             * Framework Bootstrapping
+             * Koowa Bootstrapping
+             *
+             * If KOOWA is defined assume it was already loaded and bootstrapped
              */
-            $koowa = Koowa::getInstance(array(
-                'debug'           => JDEBUG,
-                'cache'           => false, //JFactory::getApplication()->getCfg('caching')
-                'cache_namespace' => 'koowa-'.$application.'-'.md5(JFactory::getApplication()->getCfg('secret')),
-                'root_path'       => JPATH_ROOT,
-                'base_path'       => JPATH_BASE,
-                'vendor_path'     => JPATH_ROOT.(version_compare(JVERSION, '3.4', '>=') ? '/libraries/vendor' : '/vendor')
-            ));
+            if (!defined('KOOWA'))
+            {
+                require_once $path;
+
+                $application = JFactory::getApplication()->getName();
+
+                /**
+                 * Find Composer Vendor Directory
+                 */
+                $vendor_path = false;
+                if(file_exists(JPATH_ROOT.'/composer.json'))
+                {
+                    $content  = file_get_contents(JPATH_ROOT.'/composer.json');
+                    $composer = json_decode($content);
+
+                    if(isset($composer->config->vendor_dir)) {
+                        $vendor_path = JPATH_ROOT.'/'.$composer->config->vendor_dir;
+                    } else {
+                        $vendor_path = JPATH_ROOT.'/vendor';
+                    }
+                }
+
+                /**
+                 * Framework Bootstrapping
+                 */
+                Koowa::getInstance(array(
+                    'debug'           => JDEBUG,
+                    'cache'           => false, //JFactory::getApplication()->getCfg('caching')
+                    'cache_namespace' => 'koowa-' . $application . '-' . md5(JFactory::getApplication()->getCfg('secret')),
+                    'root_path'       => JPATH_ROOT,
+                    'base_path'       => JPATH_BASE,
+                    'vendor_path'     => $vendor_path
+                ));
+
+                /**
+                 * Component Bootstrapping
+                 */
+                KObjectManager::getInstance()->getObject('object.bootstrapper')
+                    ->registerComponents(JPATH_LIBRARIES . '/koowa/components', 'koowa')
+                    ->registerApplication('site', JPATH_SITE . '/components', JFactory::getApplication()->isSite())
+                    ->registerApplication('admin', JPATH_ADMINISTRATOR . '/components', JFactory::getApplication()->isAdmin())
+                    ->bootstrap();
+            }
 
             $manager = KObjectManager::getInstance();
             $loader  = $manager->getClassLoader();
-
-            /**
-             * Component Bootstrapping
-             */
-            $manager->getObject('object.bootstrapper')
-                ->registerApplication('site' , JPATH_SITE.'/components', JFactory::getApplication()->isSite())
-                ->registerApplication('admin', JPATH_ADMINISTRATOR.'/components', JFactory::getApplication()->isAdmin())
-                ->registerComponents(JPATH_LIBRARIES.'/koowa/components', 'koowa')
-                ->bootstrap();
 
             //Module Locator
             $loader->registerLocator(new ComKoowaClassLocatorModule(array(
@@ -177,6 +200,9 @@ class PlgSystemKoowa extends JPlugin
                 $manager->getObject('event.publisher')->addListener('onException', array($this, 'onException'), KEvent::PRIORITY_LOW);
             }
 
+            // Handle 404 errors gracefully after log outs
+            $manager->getObject('event.publisher')->addListener('onException', array($this, 'onErrorAfterLogout'), KEvent::PRIORITY_HIGH);
+
             /**
              * Plugin Bootstrapping
              */
@@ -186,6 +212,35 @@ class PlgSystemKoowa extends JPlugin
         }
 
         return false;
+    }
+
+    /**
+     * Handles 404 errors gracefully after log outs
+     *
+     * If a user does not have access to the entity after logging out, they will be redirected to the homepage.
+     *
+     * @param KEventException $event
+     * @return bool
+     */
+    public function onErrorAfterLogout(KEventException $event)
+    {
+        if ($event->getException()->getCode() === KHttpResponse::NOT_FOUND && JFactory::getApplication()->isSite())
+        {
+            if (version_compare(JVERSION, '3.0', '<')) {
+                $hash = JApplication::getHash('plgSystemLogout'); // Watch out. Starts with lowercase p for 2.5
+            } else {
+                $hash = JApplicationHelper::getHash('PlgSystemLogout');
+            }
+
+            $app = JFactory::getApplication();
+            if ($app->input->cookie->getString($hash, null)) // just logged out
+            {
+                $app->enqueueMessage(JText::_('PLG_SYSTEM_LOGOUT_REDIRECT'));
+                $app->redirect('index.php');
+
+                return true;
+            }
+        }
     }
 
     /**

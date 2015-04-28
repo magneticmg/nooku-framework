@@ -142,7 +142,7 @@ abstract class KDispatcherResponseAbstract extends KControllerResponse implement
 
             if(!$this->getObject('filter.path')->validate($content))
             {
-                $stream = $factory->createStream('buffer://memory', 'w+b');
+                $stream = $factory->createStream('koowa-buffer://memory', 'w+b');
                 $stream->write($content);
             }
             else $stream = $factory->createStream($content, 'rb');
@@ -264,11 +264,12 @@ abstract class KDispatcherResponseAbstract extends KControllerResponse implement
     {
         $request = $this->getRequest();
 
-        $isIE     = (bool) preg_match('#(MSIE|Trident)#', $request->getAgent());
-        $isPDF    = (bool) $this->getContentType() == 'application/pdf';
-        $isInline = (bool) !$request->isDownload();
+        $isIE         = (bool) preg_match('#(MSIE|Trident)#', $request->getAgent());
+        $isPDF        = (bool) $this->getContentType() == 'application/pdf';
+        $isInline     = (bool) !$request->isDownload();
+        $isSeekable   = (bool) $this->getStream()->isSeekable();
 
-        if(!($isIE && $isPDF && $isInline))
+        if(!($isIE && $isPDF && $isInline) && $isSeekable)
         {
             if($this->_headers->get('Transfer-Encoding') == 'chunked') {
                 return true;

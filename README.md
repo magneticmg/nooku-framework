@@ -1,6 +1,8 @@
 Nooku Framework
 ===============
 
+[ ![Codacy Badge](https://www.codacy.com/project/badge/c6cc3c05cc7a4d13806602c7647f4476) ](https://www.codacy.com/app/timble/nooku-framework)
+
 What is Nooku Framework?
 -------------------------
 
@@ -51,26 +53,18 @@ a fork from Joomla that is being completely rebuild using Nooku Framework.
 Requirements
 ------------
 
-* Joomla 2.5 and 3.x 
+* Joomla 2.5 and 3.x
 * PHP 5.2 or newer
 * MySQL 5.x
 
 Installation
 ------------
 
-* Create a `composer.json` file in the root directory of your Joomla installation and require the `nooku/nooku-framework`
-package:
+Go to the root directory of your Joomla installation in command line and execute this command:
 
-```json
-{
-    "require": {    	
-        "nooku/nooku-framework": "dev-develop"
-    },
-    "minimum-stability": "dev"
-}
 ```
-
-* Install by executing `composer install`.
+composer require nooku/nooku-framework:2.*
+```
 
 Contributing
 ------------

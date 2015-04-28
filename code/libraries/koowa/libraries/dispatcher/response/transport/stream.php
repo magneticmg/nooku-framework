@@ -192,9 +192,11 @@ class KDispatcherResponseTransportStream extends KDispatcherResponseTransportHtt
             }
 
             //Make sure the output buffers are cleared
-            while(ob_get_level()) {
+            $level = ob_get_level();
+            while($level > 0) {
                 ob_end_clean();
-            };
+                $level--;
+            }
 
             $stream  = $response->getStream();
 
@@ -269,8 +271,8 @@ class KDispatcherResponseTransportStream extends KDispatcherResponseTransportHtt
                     }
                 }
             }
-
-            return parent::send($response);
         }
+
+        return parent::send($response);
     }
 }

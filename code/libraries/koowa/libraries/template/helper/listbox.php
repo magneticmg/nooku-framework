@@ -31,17 +31,23 @@ class KTemplateHelperListbox extends KTemplateHelperSelect
             'options'   => array(),
             'select2'   => false,
             'attribs'   => array(),
-        ))->append(array(
-            'select2_options' => array(
-                'element' => $config->attribs->id ? '#'.$config->attribs->id : 'select[name='.$config->name.']',
-                'options' => array()
-            )
         ));
+
+        if ($config->attribs->multiple && $config->name && substr($config->name, -2) !== '[]') {
+            $config->name .= '[]';
+        }
 
         $html = '';
 
         if ($config->select2)
         {
+            $config->append(array(
+                'select2_options' => array(
+                    'element' => $config->attribs->id ? '#'.$config->attribs->id : 'select[name=\"'.$config->name.'\"]',
+                    'options' => array()
+                )
+            ));
+
             if ($config->deselect)
             {
                 // select2 needs the first option empty for placeholders to work on single select boxes
@@ -322,15 +328,20 @@ class KTemplateHelperListbox extends KTemplateHelperSelect
                 if (form.hasClass("-koowa-form") || form.hasClass("-koowa-grid")) {
                     form.submit(explode);
                 } else {
-                    var element = form.get(0);
+                    // See: https://github.com/joomla/joomla-cms/pull/5914 for why we use onsubmit
+                    var element = form.get(0),
+                        previous = element.onsubmit;
 
-                    if (element.addEvent) {
-                        element.addEvent("submit", explode);
-                    } else if (element.addEventListener) {
-                        element.addEventListener("submit", explode, false);
-                    } else if (element.attachEvent) {
-                        element.attachEvent("onsubmit", explode);
-                    }
+                    element.onsubmit = function() {
+                        if (typeof previous === "function") {
+                            previous();
+                        }
+
+                        explode();
+
+                        // Avoid explode to be executed more than once.
+                        element.onsubmit = previous;
+                    };
                 }
             });</script>';
         }

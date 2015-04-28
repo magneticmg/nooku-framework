@@ -161,7 +161,7 @@ abstract class KFilesystemStreamAbstract extends KObject implements KFilesystemS
      */
     public static function getName()
     {
-        return self::$_name;
+        return static::$_name;
     }
 
     /**
@@ -253,7 +253,7 @@ abstract class KFilesystemStreamAbstract extends KObject implements KFilesystemS
      */
     public function seek($offset, $whence = SEEK_SET)
     {
-        if($resource = $this->getResource()) {
+        if(($resource = $this->getResource()) && $this->isSeekable()) {
             return fseek($resource, $offset, $whence) === 0;
         }
 
@@ -471,7 +471,7 @@ abstract class KFilesystemStreamAbstract extends KObject implements KFilesystemS
         if($resource = $this->getResource())
         {
             if($this->isWritable()) {
-                return ftruncate($resource, $size);
+                return @ftruncate($resource, $size);
             }
         }
 
@@ -503,7 +503,7 @@ abstract class KFilesystemStreamAbstract extends KObject implements KFilesystemS
     {
         if($resource = $this->getResource())
         {
-            if(fclose($resource) === true)
+            if(@fclose($resource) === true)
             {
                 $this->_resource = null;
                 return true;
@@ -589,7 +589,14 @@ abstract class KFilesystemStreamAbstract extends KObject implements KFilesystemS
             throw new BadMethodCallException('The stream "'.self::getName().'" does not support stat.');
         }
 
-        return fstat($this->_resource);
+        if($this->isLocal()) {
+            $info = fstat($this->_resource);
+        }
+        else {
+            $info = @stat($this->getPath());
+        }
+
+        return $info;
     }
 
     /**
@@ -600,11 +607,7 @@ abstract class KFilesystemStreamAbstract extends KObject implements KFilesystemS
     public function getSize()
     {
         // If the stream is a file based stream and local, then use fstat
-        if (version_compare(PHP_VERSION, '5.3', '>=')) {
-            clearstatcache(true, $this->getPath());
-        } else {
-            clearstatcache();
-        }
+        clearstatcache(true, $this->getPath());
 
         $info = $this->getInfo();
 
@@ -825,7 +828,7 @@ abstract class KFilesystemStreamAbstract extends KObject implements KFilesystemS
 
                 if(array_key_exists('KFilesystemStreamFilterInterface', class_implements($class)))
                 {
-                    $filter = call_user_func(array($class, 'getName'));//$class::getName();
+                    $filter = $class::getName();
 
                     if (!empty($filter) && !in_array($filter, stream_get_filters())) {
                         stream_filter_register($filter, $class);

@@ -145,21 +145,6 @@ interface KHttpUrlInterface
     public function setQuery($query, $merge = false);
 
     /**
-     * Get the URL format
-     *
-     * @return string|null
-     */
-    public function getFormat();
-
-    /**
-     * Set the URL format
-     *
-     * @param  string $format
-     * @return KHttpUrl
-     */
-    public function setFormat($format);
-
-    /**
      * Get the URL fragment
      *
      * @return string|null
@@ -217,7 +202,7 @@ interface KHttpUrlInterface
      * @param boolean|null $escape  If TRUE escapes '&' to '&amp;' for xml compliance. If NULL use the default.
      * @return  string
      */
-    //public function toString($parts = self::FULL, $escape = false);
+    public function toString($parts = self::FULL, $escape = false);
 
     /**
      * Check if two url's are equal

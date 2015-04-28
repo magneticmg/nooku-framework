@@ -66,7 +66,9 @@ class ComKoowaTemplateHelperBehavior extends KTemplateHelperBehavior
             if (version_compare(JVERSION, '3.0', 'ge'))
             {
                 JHtml::_('jquery.framework');
-                JHtml::_('script', 'media/koowa/com_koowa/js/koowa.kquery.js', false, false, false, false, false);
+                // Can't use JHtml here as it makes a file_exists call on koowa.kquery.js?version
+                $path = JURI::root(true).'/media/koowa/com_koowa/js/koowa.kquery.js?'.substr(md5(Koowa::VERSION), 0, 8);
+                JFactory::getDocument()->addScript($path);
             }
             else $html .= parent::jquery($config);
 
@@ -208,13 +210,6 @@ class ComKoowaTemplateHelperBehavior extends KTemplateHelperBehavior
             $config->value = '';
         }
 
-        // @TODO this is legacy, or bc support, and may not be compatible with strftime and the like
-        $config->format = str_replace(
-            array('%Y', '%y', '%m', '%d', '%H', '%M', '%S'),
-            array('yyyy', 'yy', 'mm', 'dd', 'hh', 'ii', 'ss'),
-            $config->format
-        );
-
         switch (strtoupper($config->filter))
         {
             case 'SERVER_UTC':
@@ -277,8 +272,19 @@ class ComKoowaTemplateHelperBehavior extends KTemplateHelperBehavior
             self::$_loaded['calendar-triggers'] = array();
         }
 
+        if ($config->value) {
+            $config->value = strftime($config->format, JFactory::getDate($config->value)->format('U', false, true));
+        }
+
         $attribs = $this->buildAttributes($config->attribs);
         $value   = $this->getTemplate()->escape($config->value);
+
+        // @TODO this is legacy, or bc support, and may not be compatible with strftime and the like
+        $config->format = str_replace(
+            array('%Y', '%y', '%m', '%d', '%H', '%M', '%S'),
+            array('yyyy', 'yy', 'mm', 'dd', 'hh', 'ii', 'ss'),
+            $config->format
+        );
 
         if ($config->attribs->readonly !== 'readonly' && $config->attribs->disabled !== 'disabled')
         {

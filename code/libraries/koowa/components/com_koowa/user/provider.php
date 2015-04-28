@@ -78,6 +78,8 @@ final class ComKoowaUserProvider extends KUserProvider
                 'username'   => $user->username,
                 'password'   => $user->password,
                 'salt'       => '',
+                'groups'     => JAccess::getGroupsByUser($user->id),
+                'roles'      => JAccess::getAuthorisedViewLevels($user->id),
                 'authentic'  => !$user->guest,
                 'enabled'    => !$user->block,
                 'expired'    => (bool) $user->activation,
@@ -129,7 +131,7 @@ final class ComKoowaUserProvider extends KUserProvider
             }
         }
 
-        if($user->getId() != $identifier) {
+        if($identifier == 0 || $user->getId() != $identifier) {
             $result = isset($this->_users[$identifier]);
         } else {
             $result = true;

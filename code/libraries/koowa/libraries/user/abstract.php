@@ -123,7 +123,19 @@ abstract class KUserAbstract extends KObject implements KUserInterface
      */
     public function getRoles()
     {
-        return $this->getData()->roles;
+        return KObjectConfig::unbox($this->getData()->roles);
+    }
+
+    /**
+     * Checks if the user has a role.
+     *
+     * @param  mixed|array $role A role name or an array containing role names.
+     * @return bool True if the user has at least one of the provided roles, false otherwise.
+     */
+    public function hasRole($role)
+    {
+        $roles = (array) $role;
+        return (bool) array_intersect($this->getRoles(), $roles);
     }
 
     /**
@@ -133,7 +145,7 @@ abstract class KUserAbstract extends KObject implements KUserInterface
      */
     public function getGroups()
     {
-        return $this->getData()->groups;
+        return KObjectConfig::unbox($this->getData()->groups);
     }
 
     /**
